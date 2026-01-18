@@ -212,6 +212,9 @@ data/
 # Ignore the results directory
 vae_results/
 
+# Ignore figures
+figures/
+
 # Ignore testing notebooks
 pyro_intro.ipynb
 pyro_vae.ipynb
