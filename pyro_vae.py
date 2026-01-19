@@ -25,9 +25,6 @@ assert pyro.__version__.startswith('1.9.1')
 pyro.distributions.enable_validation(False)
 pyro.set_rng_seed(0) #sets the random seed for pyro and torch
 
-# Enable smoke test - run the notebook cells on CI. (this is for Pyro's own testing)
-smoke_test = 'CI' in os.environ
-
 # for loading and batching MNIST dataset
 def setup_data_loaders(batch_size=128, use_cuda=False, equivariant=False):
     root = './data'
