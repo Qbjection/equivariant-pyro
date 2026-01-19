@@ -114,8 +114,10 @@ class VAE(nn.Module):
         # register PyTorch module `decoder` with Pyro
         pyro.module("decoder", self.decoder)
         if self.equivariant:
+            #TODO do we actually need this?
             # register PyTorch module `encoder` with Pyro, as we need it for equivariance loss
             pyro.module("encoder", self.encoder)
+        #TODO why is all of this in the model and not the guide?
         with pyro.plate("data", x.shape[0]):
             # setup hyperparameters for prior p(z)
             z_loc = x.new_zeros(torch.Size((x.shape[0], self.z_dim)))
@@ -176,6 +178,7 @@ class VAE(nn.Module):
     def guide(self, x):
         # register PyTorch module `encoder` with Pyro
         pyro.module("encoder", self.encoder)
+        #TODO what if I also register the decoder here????????
         with pyro.plate("data", x.shape[0]):
             # use the encoder to get the parameters used to define q(z|x)
             z_loc, z_scale = self.encoder(x)
@@ -221,13 +224,13 @@ def train(svi, train_loader, use_cuda=False, vae=None):
         if use_cuda:
             x = x.cuda()
 
+        # do ELBO gradient and accumulate loss
+        epoch_loss += svi.step(x)
+
         eq_loss, leq_loss = get_logged_losses(vae, x)
         if eq_loss is not None and leq_loss is not None:
             equvariance_losses.append(eq_loss)
             latent_equvariance_losses.append(leq_loss)
-
-        # do ELBO gradient and accumulate loss
-        epoch_loss += svi.step(x)
 
     equvariance_loss = torch.stack(equvariance_losses).mean() if len(equvariance_losses) > 0 else None
     latent_equvariance_loss = torch.stack(latent_equvariance_losses).mean() if len(latent_equvariance_losses) > 0 else None
@@ -316,7 +319,7 @@ def main(args):
     latent_equivariance_loss_dict = {}
     epoch_times = []
 
-    if args.testing:
+    if args.render_model:
         pyro.render_model(vae.model, model_args=(torch.zeros(1, 784),), filename="vae_model.png", render_distributions=True, render_params=True)
         return 
     # training loop
@@ -436,11 +439,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--testing",
+        "--render_model",
         action="store_true",
         default=False,
-        help="Whether " \
-        "to run in testing mode (render model and exit)",
+        help="To render model and exit",
     )
 
     parser.add_argument(
