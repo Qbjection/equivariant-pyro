@@ -113,11 +113,10 @@ class VAE(nn.Module):
     def model(self, x):
         # register PyTorch module `decoder` with Pyro
         pyro.module("decoder", self.decoder)
-        if self.equivariant:
-            #TODO do we actually need this?
-            # register PyTorch module `encoder` with Pyro, as we need it for equivariance loss
-            pyro.module("encoder", self.encoder)
-        #TODO why is all of this in the model and not the guide?
+        #TODO remove these comments
+        # if self.equivariant:
+        #     # register PyTorch module `encoder` with Pyro, as we need it for equivariance loss
+        #     pyro.module("encoder", self.encoder)
         with pyro.plate("data", x.shape[0]):
             # setup hyperparameters for prior p(z)
             z_loc = x.new_zeros(torch.Size((x.shape[0], self.z_dim)))
@@ -165,7 +164,6 @@ class VAE(nn.Module):
                 # ----------------------   
                 
                 # do ELBO gradient and accumulate loss
-                # TODO explain why we use deterministic and factor here
                 pyro.deterministic("equivariance_loss_value", equivariance_loss)
                 pyro.deterministic("latent_equivariance_loss_value", latent_equivariance_loss)
                 pyro.factor("equivariance_loss", - self.lambda_eq * equivariance_loss)
@@ -178,7 +176,6 @@ class VAE(nn.Module):
     def guide(self, x):
         # register PyTorch module `encoder` with Pyro
         pyro.module("encoder", self.encoder)
-        #TODO what if I also register the decoder here????????
         with pyro.plate("data", x.shape[0]):
             # use the encoder to get the parameters used to define q(z|x)
             z_loc, z_scale = self.encoder(x)
