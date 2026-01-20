@@ -113,10 +113,6 @@ class VAE(nn.Module):
     def model(self, x):
         # register PyTorch module `decoder` with Pyro
         pyro.module("decoder", self.decoder)
-        #TODO remove these comments
-        # if self.equivariant:
-        #     # register PyTorch module `encoder` with Pyro, as we need it for equivariance loss
-        #     pyro.module("encoder", self.encoder)
         with pyro.plate("data", x.shape[0]):
             # setup hyperparameters for prior p(z)
             z_loc = x.new_zeros(torch.Size((x.shape[0], self.z_dim)))
