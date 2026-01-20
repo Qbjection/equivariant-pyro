@@ -218,3 +218,6 @@ figures/
 # Ignore testing notebooks
 pyro_intro.ipynb
 pyro_vae.ipynb
+
+#Ignore plot notebook
+final_plots.ipynb

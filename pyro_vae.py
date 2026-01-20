@@ -32,9 +32,9 @@ def setup_data_loaders(batch_size=128, use_cuda=False, equivariant=False):
     train_trans = transforms.ToTensor()
     test_trans = transforms.ToTensor()
 
-    # we augment the dataset with rotations for the non-equivariant model, to provide a fair comparison:
-    if not equivariant:
-        train_trans = transforms.Compose([RandomRotation(), transforms.ToTensor()])
+    # we no longer augment the dataset with rotations for the non-equivariant model, to provide a fair comparison:
+    # if not equivariant:
+        # train_trans = transforms.Compose([RandomRotation(), transforms.ToTensor()])
     
     train_set = MNIST(root=root, train=True, transform=train_trans,
                       download=download)
@@ -110,7 +110,7 @@ class VAE(nn.Module):
         self.lambda_latent_eq = lambda_latent_eq
 
     # define the model p(x|z)p(z)
-    def model(self, x):
+    def model(self, x, beta=1.0):
         # register PyTorch module `decoder` with Pyro
         pyro.module("decoder", self.decoder)
         with pyro.plate("data", x.shape[0]):
@@ -118,7 +118,8 @@ class VAE(nn.Module):
             z_loc = x.new_zeros(torch.Size((x.shape[0], self.z_dim)))
             z_scale = x.new_ones(torch.Size((x.shape[0], self.z_dim)))
             # sample from prior (value will be sampled by guide when computing the ELBO)
-            z = pyro.sample("latent", dist.Normal(z_loc, z_scale).to_event(1))
+            with pyro.poutine.scale(scale=beta):
+                z = pyro.sample("latent", dist.Normal(z_loc, z_scale).to_event(1))
             # decode the latent code z
             loc_img = self.decoder(z)
             # score against actual images
@@ -169,14 +170,15 @@ class VAE(nn.Module):
             return loc_img
 
     # define the guide (i.e. variational distribution) q(z|x)
-    def guide(self, x):
+    def guide(self, x, beta=1.0):
         # register PyTorch module `encoder` with Pyro
         pyro.module("encoder", self.encoder)
         with pyro.plate("data", x.shape[0]):
             # use the encoder to get the parameters used to define q(z|x)
             z_loc, z_scale = self.encoder(x)
             # sample the latent code z
-            pyro.sample("latent", dist.Normal(z_loc, z_scale).to_event(1))
+            with pyro.poutine.scale(scale=beta):
+                pyro.sample("latent", dist.Normal(z_loc, z_scale).to_event(1))
         return z_loc, z_scale
 
     # define a helper function for reconstructing images
@@ -368,6 +370,9 @@ def main(args):
         "equivariant": args.equivariant,
         "lambda_eq": args.lambda_eq,
         "lambda_latent_eq": args.lambda_latent_eq,
+        "beta": args.beta,
+        "equivariance_loss": equivariance_loss_dict,
+        "latent_equivariance_loss": latent_equivariance_loss_dict,
     }
     print("Logs:\n")
     pprint(logs)
@@ -400,14 +405,14 @@ if __name__ == "__main__":
         "-visdom",
         "--visdom_flag",
         action="store_true",
-        help="Whether plotting in visdom is desired",
+        help="Plotting in visdom",
     )
     parser.add_argument(
         "-i-tsne",
         "--tsne_iter",
         default=100,
         type=int,
-        help="epoch when tsne visualization runs",
+        help="Epoch when tsne visualization runs",
     )
 
     parser.add_argument(
@@ -443,6 +448,13 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Whether to account for GPU synchronisation while timing",
+    )
+
+    parser.add_argument(
+        "--beta",
+        default=1.0,
+        type=float,
+        help="Beta value for Beta-VAE",
     )
 
     args = parser.parse_args()

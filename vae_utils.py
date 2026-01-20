@@ -88,14 +88,14 @@ def plot_llk(train_elbo, test_elbo, equivariant=False):
     df1 = pd.DataFrame(
         {
             "Epoch": train_elbo.keys(),
-            "ELBO": [-val for val in train_elbo.values()],
+            "Loss": [-val for val in train_elbo.values()],
             "dataset": "Train",
         }
     )
     df2 = pd.DataFrame(
         {
             "Epoch": test_elbo.keys(),
-            "ELBO": [-val for val in test_elbo.values()],
+            "Loss": [-val for val in test_elbo.values()],
             "dataset": "Test",
         }
     )
@@ -103,8 +103,8 @@ def plot_llk(train_elbo, test_elbo, equivariant=False):
 
     # Create the FacetGrid with scatter plot
     g = sns.FacetGrid(df, height=4, aspect=1.5, hue="dataset")
-    g.map(sns.scatterplot, "Epoch", "ELBO")
-    g.map(sns.lineplot, "Epoch", "ELBO", linestyle="--")
+    g.map(sns.scatterplot, "Epoch", "Loss")
+    g.map(sns.lineplot, "Epoch", "Loss", linestyle="--")
     g.ax.yaxis.get_major_locator().set_params(integer=True)
     g.add_legend()
     plt.savefig("./vae_results/test_elbo_vae" + f"{'_equivariant' if equivariant else ''}" + ".png")
